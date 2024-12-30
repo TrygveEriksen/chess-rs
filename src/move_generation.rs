@@ -64,10 +64,14 @@ impl ChessState {
         let b_pos: Vec<(usize, usize)> = ChessState::find_positions(state.board, 4 * coefficient);
         let q_pos: (usize, usize) = ChessState::find_position(state.board, 5 * coefficient);
         let k_pos: (usize, usize) = ChessState::find_position(state.board, 6 * coefficient);
-        let horisontal_lock: Vec<(usize, usize)> = ChessState::horisontal_lock();
-        let vertical_lock: Vec<(usize, usize)> = ChessState::vertical_lock();
-        let left_diagonal_lock: Vec<(usize, usize)> = ChessState::left_diagonal_lock();
-        let right_diagonal_lock: Vec<(usize, usize)> = ChessState::right_diagonal_lock();
+        let horisontal_pin: Vec<(usize, usize)> =
+            ChessState::horisontal_pin(state.board, k_pos, coefficient);
+        let vertical_pin: Vec<(usize, usize)> =
+            ChessState::vertical_pin(state.board, k_pos, coefficient);
+        let left_diagonal_pin: Vec<(usize, usize)> =
+            ChessState::left_diagonal_pin(state.board, k_pos, coefficient);
+        let right_diagonal_pin: Vec<(usize, usize)> =
+            ChessState::right_diagonal_pin(state.board, k_pos, coefficient);
         let danger_squares: HashSet<(usize, usize)> =
             ChessState::danger_squares(state.board, coefficient);
         if player {
@@ -138,9 +142,9 @@ impl ChessState {
                 }
                 for pos in r_pos.iter() {
                     let mut possible: Vec<(usize, usize)> = Vec::new();
-                    if !(vertical_lock.contains(pos)
-                        || right_diagonal_lock.contains(pos)
-                        || left_diagonal_lock.contains(pos))
+                    if !(vertical_pin.contains(pos)
+                        || right_diagonal_pin.contains(pos)
+                        || left_diagonal_pin.contains(pos))
                     {
                         //Horisontal rook moves
                         for dir in HORISONTAL {
@@ -152,9 +156,9 @@ impl ChessState {
                             ));
                         }
                     }
-                    if !(horisontal_lock.contains(pos)
-                        || right_diagonal_lock.contains(pos)
-                        || left_diagonal_lock.contains(pos))
+                    if !(horisontal_pin.contains(pos)
+                        || right_diagonal_pin.contains(pos)
+                        || left_diagonal_pin.contains(pos))
                     {
                         //Vertical rook moves
                         for dir in VERTICAL {
@@ -188,9 +192,9 @@ impl ChessState {
                 }
                 for pos in b_pos.iter() {
                     let mut possible: Vec<(usize, usize)> = Vec::new();
-                    if !(vertical_lock.contains(pos)
-                        || horisontal_lock.contains(pos)
-                        || left_diagonal_lock.contains(pos))
+                    if !(vertical_pin.contains(pos)
+                        || horisontal_pin.contains(pos)
+                        || left_diagonal_pin.contains(pos))
                     {
                         //Horisontal rook moves
                         for dir in RIGHT_DIAGONAL {
@@ -202,9 +206,9 @@ impl ChessState {
                             ));
                         }
                     }
-                    if !(vertical_lock.contains(pos)
-                        || horisontal_lock.contains(pos)
-                        || right_diagonal_lock.contains(pos))
+                    if !(vertical_pin.contains(pos)
+                        || horisontal_pin.contains(pos)
+                        || right_diagonal_pin.contains(pos))
                     {
                         //Vertical rook moves
                         for dir in LEFT_DIAGONAL {
@@ -237,10 +241,10 @@ impl ChessState {
                     }
                 }
                 for pos in n_pos.iter() {
-                    if !(vertical_lock.contains(pos)
-                        || horisontal_lock.contains(pos)
-                        || horisontal_lock.contains(pos)
-                        || right_diagonal_lock.contains(pos))
+                    if !(vertical_pin.contains(pos)
+                        || horisontal_pin.contains(pos)
+                        || horisontal_pin.contains(pos)
+                        || right_diagonal_pin.contains(pos))
                     {
                         for dir in KNIGHT_DIRECTIONS {
                             let new_pos = (pos.0 as i8 + dir.0, pos.1 as i8 + dir.1);
@@ -273,9 +277,9 @@ impl ChessState {
                 }
                 if q_pos.0 != 9 {
                     let mut possible: Vec<(usize, usize)> = Vec::new();
-                    if !(vertical_lock.contains(&q_pos)
-                        || horisontal_lock.contains(&q_pos)
-                        || left_diagonal_lock.contains(&q_pos))
+                    if !(vertical_pin.contains(&q_pos)
+                        || horisontal_pin.contains(&q_pos)
+                        || left_diagonal_pin.contains(&q_pos))
                     {
                         for dir in RIGHT_DIAGONAL {
                             possible.append(&mut ChessState::directional_moves(
@@ -287,9 +291,9 @@ impl ChessState {
                         }
                     }
 
-                    if !(vertical_lock.contains(&q_pos)
-                        || horisontal_lock.contains(&q_pos)
-                        || right_diagonal_lock.contains(&q_pos))
+                    if !(vertical_pin.contains(&q_pos)
+                        || horisontal_pin.contains(&q_pos)
+                        || right_diagonal_pin.contains(&q_pos))
                     {
                         for dir in LEFT_DIAGONAL {
                             possible.append(&mut ChessState::directional_moves(
@@ -301,9 +305,9 @@ impl ChessState {
                         }
                     }
 
-                    if !(vertical_lock.contains(&q_pos)
-                        || right_diagonal_lock.contains(&q_pos)
-                        || left_diagonal_lock.contains(&q_pos))
+                    if !(vertical_pin.contains(&q_pos)
+                        || right_diagonal_pin.contains(&q_pos)
+                        || left_diagonal_pin.contains(&q_pos))
                     {
                         for dir in HORISONTAL {
                             possible.append(&mut ChessState::directional_moves(
@@ -315,9 +319,9 @@ impl ChessState {
                         }
                     }
 
-                    if !(right_diagonal_lock.contains(&q_pos)
-                        || horisontal_lock.contains(&q_pos)
-                        || left_diagonal_lock.contains(&q_pos))
+                    if !(right_diagonal_pin.contains(&q_pos)
+                        || horisontal_pin.contains(&q_pos)
+                        || left_diagonal_pin.contains(&q_pos))
                     {
                         {
                             for dir in VERTICAL {
@@ -480,9 +484,9 @@ impl ChessState {
                 }
                 for pos in r_pos.iter() {
                     let mut possible: Vec<(usize, usize)> = Vec::new();
-                    if !(vertical_lock.contains(pos)
-                        || right_diagonal_lock.contains(pos)
-                        || left_diagonal_lock.contains(pos))
+                    if !(vertical_pin.contains(pos)
+                        || right_diagonal_pin.contains(pos)
+                        || left_diagonal_pin.contains(pos))
                     {
                         //Horisontal rook moves
                         for dir in HORISONTAL {
@@ -494,9 +498,9 @@ impl ChessState {
                             ));
                         }
                     }
-                    if !(horisontal_lock.contains(pos)
-                        || right_diagonal_lock.contains(pos)
-                        || left_diagonal_lock.contains(pos))
+                    if !(horisontal_pin.contains(pos)
+                        || right_diagonal_pin.contains(pos)
+                        || left_diagonal_pin.contains(pos))
                     {
                         //Vertical rook moves
                         for dir in VERTICAL {
@@ -530,9 +534,9 @@ impl ChessState {
                 }
                 for pos in b_pos.iter() {
                     let mut possible: Vec<(usize, usize)> = Vec::new();
-                    if !(vertical_lock.contains(pos)
-                        || horisontal_lock.contains(pos)
-                        || left_diagonal_lock.contains(pos))
+                    if !(vertical_pin.contains(pos)
+                        || horisontal_pin.contains(pos)
+                        || left_diagonal_pin.contains(pos))
                     {
                         //Horisontal rook moves
                         for dir in RIGHT_DIAGONAL {
@@ -544,9 +548,9 @@ impl ChessState {
                             ));
                         }
                     }
-                    if !(vertical_lock.contains(pos)
-                        || horisontal_lock.contains(pos)
-                        || right_diagonal_lock.contains(pos))
+                    if !(vertical_pin.contains(pos)
+                        || horisontal_pin.contains(pos)
+                        || right_diagonal_pin.contains(pos))
                     {
                         //Vertical rook moves
                         for dir in LEFT_DIAGONAL {
@@ -579,10 +583,10 @@ impl ChessState {
                     }
                 }
                 for pos in n_pos.iter() {
-                    if !(vertical_lock.contains(pos)
-                        || horisontal_lock.contains(pos)
-                        || horisontal_lock.contains(pos)
-                        || right_diagonal_lock.contains(pos))
+                    if !(vertical_pin.contains(pos)
+                        || horisontal_pin.contains(pos)
+                        || horisontal_pin.contains(pos)
+                        || right_diagonal_pin.contains(pos))
                     {
                         for dir in KNIGHT_DIRECTIONS {
                             let new_pos = (pos.0 as i8 + dir.0, pos.1 as i8 + dir.1);
@@ -615,9 +619,9 @@ impl ChessState {
                 }
                 if q_pos.0 != 9 {
                     let mut possible: Vec<(usize, usize)> = Vec::new();
-                    if !(vertical_lock.contains(&q_pos)
-                        || horisontal_lock.contains(&q_pos)
-                        || left_diagonal_lock.contains(&q_pos))
+                    if !(vertical_pin.contains(&q_pos)
+                        || horisontal_pin.contains(&q_pos)
+                        || left_diagonal_pin.contains(&q_pos))
                     {
                         for dir in RIGHT_DIAGONAL {
                             possible.append(&mut ChessState::directional_moves(
@@ -629,9 +633,9 @@ impl ChessState {
                         }
                     }
 
-                    if !(vertical_lock.contains(&q_pos)
-                        || horisontal_lock.contains(&q_pos)
-                        || right_diagonal_lock.contains(&q_pos))
+                    if !(vertical_pin.contains(&q_pos)
+                        || horisontal_pin.contains(&q_pos)
+                        || right_diagonal_pin.contains(&q_pos))
                     {
                         for dir in LEFT_DIAGONAL {
                             possible.append(&mut ChessState::directional_moves(
@@ -643,9 +647,9 @@ impl ChessState {
                         }
                     }
 
-                    if !(vertical_lock.contains(&q_pos)
-                        || right_diagonal_lock.contains(&q_pos)
-                        || left_diagonal_lock.contains(&q_pos))
+                    if !(vertical_pin.contains(&q_pos)
+                        || right_diagonal_pin.contains(&q_pos)
+                        || left_diagonal_pin.contains(&q_pos))
                     {
                         for dir in HORISONTAL {
                             possible.append(&mut ChessState::directional_moves(
@@ -657,9 +661,9 @@ impl ChessState {
                         }
                     }
 
-                    if !(right_diagonal_lock.contains(&q_pos)
-                        || horisontal_lock.contains(&q_pos)
-                        || left_diagonal_lock.contains(&q_pos))
+                    if !(right_diagonal_pin.contains(&q_pos)
+                        || horisontal_pin.contains(&q_pos)
+                        || left_diagonal_pin.contains(&q_pos))
                     {
                         {
                             for dir in VERTICAL {
@@ -773,21 +777,115 @@ impl ChessState {
         return moves;
     }
 
-    fn vertical_lock() -> Vec<(usize, usize)> {
+    fn vertical_pin(
+        board: [[i8; 8]; 8],
+        position: (usize, usize),
+        coefficient: i8,
+    ) -> Vec<(usize, usize)> {
+        let mut pinned = Vec::new();
+        for direction in VERTICAL {
+            pinned.append(&mut ChessState::directional_pin(
+                board,
+                position,
+                coefficient,
+                direction,
+                vec![-2, -5],
+            ))
+        }
+        pinned
+    }
+
+    fn horisontal_pin(
+        board: [[i8; 8]; 8],
+        position: (usize, usize),
+        coefficient: i8,
+    ) -> Vec<(usize, usize)> {
+        let mut pinned = Vec::new();
+        for direction in HORISONTAL {
+            pinned.append(&mut ChessState::directional_pin(
+                board,
+                position,
+                coefficient,
+                direction,
+                vec![-2, -5],
+            ))
+        }
+        pinned
+    }
+
+    fn right_diagonal_pin(
+        board: [[i8; 8]; 8],
+        position: (usize, usize),
+        coefficient: i8,
+    ) -> Vec<(usize, usize)> {
+        let mut pinned = Vec::new();
+        for direction in RIGHT_DIAGONAL {
+            pinned.append(&mut ChessState::directional_pin(
+                board,
+                position,
+                coefficient,
+                direction,
+                vec![-4, -5],
+            ))
+        }
+        pinned
+    }
+
+    fn left_diagonal_pin(
+        board: [[i8; 8]; 8],
+        position: (usize, usize),
+        coefficient: i8,
+    ) -> Vec<(usize, usize)> {
+        let mut pinned = Vec::new();
+        for direction in LEFT_DIAGONAL {
+            pinned.append(&mut ChessState::directional_pin(
+                board,
+                position,
+                coefficient,
+                direction,
+                vec![-4, -5],
+            ))
+        }
+        pinned
+    }
+
+    fn directional_pin(
+        board: [[i8; 8]; 8],
+        position: (usize, usize),
+        coefficient: i8,
+        direction: (i8, i8),
+        dangerous: Vec<i8>,
+    ) -> Vec<(usize, usize)> {
+        let mut visited: Vec<(usize, usize)> = Vec::new();
+        let mut new_pos = (
+            position.0 as i8 + direction.0,
+            position.1 as i8 + direction.1,
+        );
+        let mut pin_flag = false;
+        while -1 < new_pos.0 && new_pos.0 < 8 && -1 < new_pos.1 && new_pos.1 < 8 {
+            if board[new_pos.0 as usize][new_pos.1 as usize] * coefficient < 0 {
+                if (dangerous
+                    .contains(&(board[new_pos.0 as usize][new_pos.1 as usize] * coefficient)))
+                    && pin_flag
+                {
+                    return visited;
+                } else {
+                    break;
+                }
+            } else if board[new_pos.0 as usize][new_pos.1 as usize] * coefficient > 0 {
+                if pin_flag {
+                    break;
+                } else {
+                    pin_flag = true;
+                    visited.push((new_pos.0 as usize, new_pos.1 as usize));
+                }
+            } else {
+            }
+            new_pos = (new_pos.0 as i8 + direction.0, new_pos.1 as i8 + direction.1);
+        }
         Vec::new()
     }
 
-    fn horisontal_lock() -> Vec<(usize, usize)> {
-        Vec::new()
-    }
-
-    fn right_diagonal_lock() -> Vec<(usize, usize)> {
-        Vec::new()
-    }
-
-    fn left_diagonal_lock() -> Vec<(usize, usize)> {
-        Vec::new()
-    }
     fn danger_squares(board: [[i8; 8]; 8], coefficient: i8) -> HashSet<(usize, usize)> {
         let mut danger_squares = HashSet::new();
         for (idx, row) in board.iter().enumerate() {
@@ -881,7 +979,7 @@ impl ChessState {
             if board[new_pos.0 as usize][new_pos.1 as usize] * coefficient < 0 {
                 danger_squares.insert((new_pos.0 as usize, new_pos.1 as usize));
                 break;
-            } else if board[new_pos.0 as usize][new_pos.1 as usize] * coefficient < 0 {
+            } else if board[new_pos.0 as usize][new_pos.1 as usize] * coefficient > 0 {
                 danger_squares.insert((new_pos.0 as usize, new_pos.1 as usize));
                 break;
             } else {
