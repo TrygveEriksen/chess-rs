@@ -1,4 +1,4 @@
-use std::usize;
+use std::{collections::HashSet, usize};
 
 use crate::chess::ChessState;
 
@@ -26,6 +26,9 @@ const KING_DIRECTIONS: [(i8, i8); 8] = [
     (1, 1),
     (-1, -1),
 ];
+const STRAIGHT: [(i8, i8); 4] = [(1, 0), (-1, 0), (0, 1), (0, -1)];
+const DIAGONAL: [(i8, i8); 4] = [(1, -1), (-1, 1), (1, 1), (-1, -1)];
+const PIECE_SYMBOLS: &'static [&'static str; 4] = &["R", "B", "N", "Q"];
 
 impl ChessState {
     fn find_positions(board: [[i8; 8]; 8], piece: i8) -> Vec<(usize, usize)> {
@@ -51,12 +54,6 @@ impl ChessState {
     }
 
     pub fn get_all_possible_moves(state: ChessState) -> Vec<String> {
-        let PIECE_SYMBOLS: [String; 4] = [
-            "R".to_string(),
-            "B".to_string(),
-            "N".to_string(),
-            "Q".to_string(),
-        ];
         let player: bool = state.turn;
         let coefficient: i8 = if player { 1 } else { -1 };
 
@@ -71,7 +68,8 @@ impl ChessState {
         let vertical_lock: Vec<(usize, usize)> = ChessState::vertical_lock();
         let left_diagonal_lock: Vec<(usize, usize)> = ChessState::left_diagonal_lock();
         let right_diagonal_lock: Vec<(usize, usize)> = ChessState::right_diagonal_lock();
-
+        let danger_squares: HashSet<(usize, usize)> =
+            ChessState::danger_squares(state.board, coefficient);
         if player {
             //white move generation
             if ChessState::king_checked(&state, player) {
@@ -88,7 +86,7 @@ impl ChessState {
                         );
                         if pos.0 == 6 {
                             for piece in PIECE_SYMBOLS.iter() {
-                                all_moves.push(m.clone() + piece.as_str());
+                                all_moves.push(m.clone() + piece);
                             }
                         } else {
                             all_moves.push(m);
@@ -103,7 +101,7 @@ impl ChessState {
                             );
                             if pos.0 == 6 {
                                 for piece in PIECE_SYMBOLS.iter() {
-                                    all_moves.push(m.clone() + piece.as_str());
+                                    all_moves.push(m.clone() + piece);
                                 }
                             } else {
                                 all_moves.push(m.clone());
@@ -119,7 +117,7 @@ impl ChessState {
                             );
                             if pos.0 == 6 {
                                 for piece in PIECE_SYMBOLS.iter() {
-                                    all_moves.push(m.clone() + piece.as_str());
+                                    all_moves.push(m.clone() + piece);
                                 }
                             } else {
                                 all_moves.push(m);
@@ -358,33 +356,48 @@ impl ChessState {
                         if -1 < new_pos.0
                             && new_pos.0 < 8
                             && -1 < new_pos.1
-                            && new_pos.1 < 7
-                            && ChessState::safe_square(
-                                state.board,
-                                player,
-                                (new_pos.0 as usize, new_pos.1 as usize),
-                            )
+                            && new_pos.1 < 8
+                            && !danger_squares.contains(&(new_pos.0 as usize, new_pos.1 as usize))
                         {
                             all_moves.push(
                                 if state.board[new_pos.0 as usize][new_pos.1 as usize] == 0 {
                                     format!(
                                         "K{}{}-{}{}",
-                                        (q_pos.1 + 97) as u8 as char,
-                                        q_pos.0 + 1,
+                                        (k_pos.1 + 97) as u8 as char,
+                                        k_pos.0 + 1,
                                         (new_pos.1 + 97) as u8 as char,
                                         new_pos.0 + 1
                                     )
                                 } else {
                                     format!(
                                         "K{}{}x{}{}",
-                                        (q_pos.1 + 97) as u8 as char,
-                                        q_pos.0 + 1,
+                                        (k_pos.1 + 97) as u8 as char,
+                                        k_pos.0 + 1,
                                         (new_pos.1 + 97) as u8 as char,
                                         new_pos.0 + 1
                                     )
                                 },
                             );
                         }
+                    }
+                    // White castling
+                    if state.castling.contains("K")
+                        && state.board[0][5] == 0
+                        && state.board[0][6] == 0
+                        && !danger_squares.contains(&(0, 5))
+                        && !danger_squares.contains(&(0, 6))
+                    {
+                        all_moves.push("O-O".into())
+                    }
+                    if state.castling.contains("Q")
+                        && state.board[0][1] == 0
+                        && state.board[0][2] == 0
+                        && state.board[0][3] == 0
+                        && !danger_squares.contains(&(0, 1))
+                        && !danger_squares.contains(&(0, 2))
+                        && !danger_squares.contains(&(0, 3))
+                    {
+                        all_moves.push("O-O-O".into())
                     }
                 }
             }
@@ -426,7 +439,7 @@ impl ChessState {
                             all_moves.push(m);
                         } else if pos.0 == 1 {
                             for piece in PIECE_SYMBOLS.iter() {
-                                all_moves.push(m.clone() + piece.as_str());
+                                all_moves.push(m.clone() + piece);
                             }
                         } else {
                             all_moves.push(m);
@@ -442,7 +455,7 @@ impl ChessState {
                         );
                         if pos.0 == 1 {
                             for piece in PIECE_SYMBOLS.iter() {
-                                all_moves.push(m.clone() + piece.as_str());
+                                all_moves.push(m.clone() + piece);
                             }
                         } else {
                             all_moves.push(m.clone());
@@ -458,7 +471,7 @@ impl ChessState {
                         );
                         if pos.0 == 1 {
                             for piece in PIECE_SYMBOLS.iter() {
-                                all_moves.push(m.clone() + piece.as_str());
+                                all_moves.push(m.clone() + piece);
                             }
                         } else {
                             all_moves.push(m);
@@ -686,18 +699,14 @@ impl ChessState {
                             && new_pos.0 < 8
                             && -1 < new_pos.1
                             && new_pos.1 < 7
-                            && ChessState::safe_square(
-                                state.board,
-                                player,
-                                (new_pos.0 as usize, new_pos.1 as usize),
-                            )
+                            && !danger_squares.contains(&(new_pos.0 as usize, new_pos.1 as usize))
                         {
                             all_moves.push(
                                 if state.board[new_pos.0 as usize][new_pos.1 as usize] == 0 {
                                     format!(
                                         "K{}{}-{}{}",
-                                        (q_pos.1 + 97) as u8 as char,
-                                        q_pos.0 + 1,
+                                        (k_pos.1 + 97) as u8 as char,
+                                        k_pos.0 + 1,
                                         (new_pos.1 + 97) as u8 as char,
                                         new_pos.0 + 1
                                     )
@@ -712,6 +721,24 @@ impl ChessState {
                                 },
                             );
                         }
+                    }
+                    if state.castling.contains("k")
+                        && state.board[7][5] == 0
+                        && state.board[7][6] == 0
+                        && !danger_squares.contains(&(7, 5))
+                        && !danger_squares.contains(&(7, 6))
+                    {
+                        all_moves.push("O-O".into())
+                    }
+                    if state.castling.contains("q")
+                        && state.board[7][1] == 0
+                        && state.board[7][2] == 0
+                        && state.board[7][3] == 0
+                        && !danger_squares.contains(&(7, 1))
+                        && !danger_squares.contains(&(7, 2))
+                        && !danger_squares.contains(&(7, 3))
+                    {
+                        all_moves.push("O-O-O".into())
                     }
                 }
             }
@@ -761,8 +788,108 @@ impl ChessState {
     fn left_diagonal_lock() -> Vec<(usize, usize)> {
         Vec::new()
     }
-    fn safe_square(board: [[i8; 8]; 8], player: bool, square: (usize, usize)) -> bool {
-        return board[square.0][square.1] == 0;
+    fn danger_squares(board: [[i8; 8]; 8], coefficient: i8) -> HashSet<(usize, usize)> {
+        let mut danger_squares = HashSet::new();
+        for (idx, row) in board.iter().enumerate() {
+            for (jdx, field) in row.iter().enumerate() {
+                let position = (idx, jdx);
+                match field * coefficient {
+                    -1 => {}
+                    -2 => {
+                        for direction in STRAIGHT {
+                            for new_pos in ChessState::danger_squares_from_position(
+                                board,
+                                coefficient,
+                                direction,
+                                position,
+                            )
+                            .iter()
+                            {
+                                danger_squares.insert(*new_pos);
+                            }
+                        }
+                    }
+                    -3 => {
+                        for direction in KNIGHT_DIRECTIONS {
+                            let new_pos = (
+                                (position.0 as i8 + direction.0),
+                                (position.1 as i8 + direction.1),
+                            );
+                            if -1 < new_pos.0 && new_pos.0 < 8 && -1 < new_pos.1 && new_pos.1 < 8 {
+                                danger_squares.insert((new_pos.0 as usize, new_pos.1 as usize));
+                            }
+                        }
+                    }
+                    -4 => {
+                        for direction in DIAGONAL {
+                            for new_pos in ChessState::danger_squares_from_position(
+                                board,
+                                coefficient,
+                                direction,
+                                position,
+                            )
+                            .iter()
+                            {
+                                danger_squares.insert(*new_pos);
+                            }
+                        }
+                    }
+                    -5 => {
+                        for direction in KING_DIRECTIONS {
+                            for new_pos in ChessState::danger_squares_from_position(
+                                board,
+                                coefficient,
+                                direction,
+                                position,
+                            )
+                            .iter()
+                            {
+                                danger_squares.insert(*new_pos);
+                            }
+                        }
+                    }
+                    -6 => {
+                        for direction in KING_DIRECTIONS {
+                            let new_pos = (
+                                (position.0 as i8 + direction.0),
+                                (position.1 as i8 + direction.1),
+                            );
+                            if -1 < new_pos.0 && new_pos.0 < 8 && -1 < new_pos.1 && new_pos.1 < 8 {
+                                danger_squares.insert((new_pos.0 as usize, new_pos.1 as usize));
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        danger_squares
+    }
+
+    fn danger_squares_from_position(
+        board: [[i8; 8]; 8],
+        coefficient: i8,
+        direction: (i8, i8),
+        position: (usize, usize),
+    ) -> HashSet<(usize, usize)> {
+        let mut danger_squares = HashSet::new();
+        let mut new_pos = (
+            position.0 as i8 + direction.0,
+            position.1 as i8 + direction.1,
+        );
+        while -1 < new_pos.0 && new_pos.0 < 8 && -1 < new_pos.1 && new_pos.1 < 8 {
+            if board[new_pos.0 as usize][new_pos.1 as usize] * coefficient < 0 {
+                danger_squares.insert((new_pos.0 as usize, new_pos.1 as usize));
+                break;
+            } else if board[new_pos.0 as usize][new_pos.1 as usize] * coefficient < 0 {
+                danger_squares.insert((new_pos.0 as usize, new_pos.1 as usize));
+                break;
+            } else {
+                danger_squares.insert((new_pos.0 as usize, new_pos.1 as usize));
+            }
+            new_pos = (new_pos.0 as i8 + direction.0, new_pos.1 as i8 + direction.1);
+        }
+        return danger_squares;
     }
 
     pub fn king_checked(state: &ChessState, player: bool) -> bool {
