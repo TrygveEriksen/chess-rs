@@ -2,8 +2,8 @@ use std::{collections::HashSet, usize};
 
 use crate::chess::ChessState;
 
-const HORISONTAL: [(i8, i8); 2] = [(1, 0), (-1, 0)];
-const VERTICAL: [(i8, i8); 2] = [(0, 1), (0, -1)]; //
+const VERTICAL: [(i8, i8); 2] = [(1, 0), (-1, 0)];
+const HORISONTAL: [(i8, i8); 2] = [(0, 1), (0, -1)]; //
 const LEFT_DIAGONAL: [(i8, i8); 2] = [(1, -1), (-1, 1)]; //TODO:fix
 const RIGHT_DIAGONAL: [(i8, i8); 2] = [(1, 1), (-1, -1)];
 const KNIGHT_DIRECTIONS: [(i8, i8); 8] = [
@@ -76,11 +76,15 @@ impl ChessState {
             ChessState::danger_squares(state.board, coefficient);
         if player {
             //white move generation
-            if ChessState::king_checked(&state, player) {
+            if danger_squares.contains(&k_pos) {
             } else {
                 //Pawns
                 for pos in p_pos.iter() {
-                    if state.board[pos.0 + 1][pos.1] == 0 {
+                    if state.board[pos.0 + 1][pos.1] == 0
+                        && !(horisontal_pin.contains(pos)
+                            || left_diagonal_pin.contains(pos)
+                            || right_diagonal_pin.contains(pos))
+                    {
                         let m = format!(
                             "{}{}-{}{}",
                             (pos.1 + 97) as u8 as char,
@@ -88,6 +92,16 @@ impl ChessState {
                             (pos.1 + 97) as u8 as char,
                             pos.0 + 2
                         );
+                        if pos.0 == 1 && state.board[3][pos.1] == 0 {
+                            //White double pawn move
+                            all_moves.push(format!(
+                                "{}{}-{}{}",
+                                (pos.1 + 97) as u8 as char,
+                                2,
+                                (pos.1 + 97) as u8 as char,
+                                4
+                            ));
+                        }
                         if pos.0 == 6 {
                             for piece in PIECE_SYMBOLS.iter() {
                                 all_moves.push(m.clone() + piece);
@@ -95,47 +109,48 @@ impl ChessState {
                         } else {
                             all_moves.push(m);
                         }
-                        if pos.1 > 0 && state.board[pos.0 + 1][pos.1 - 1] < 0 {
-                            let m = format!(
-                                "{}{}x{}{}",
-                                (pos.1 + 97) as u8 as char,
-                                pos.0 + 1,
-                                (pos.1 + 96) as u8 as char,
-                                pos.0 + 2
-                            );
-                            if pos.0 == 6 {
-                                for piece in PIECE_SYMBOLS.iter() {
-                                    all_moves.push(m.clone() + piece);
-                                }
-                            } else {
-                                all_moves.push(m.clone());
+                    }
+                    if pos.1 > 0
+                        && (state.board[pos.0 + 1][pos.1 - 1] < 0
+                            || (state.en_passant[pos.1 - 1] != 0 && pos.0 == 4))
+                        && !(vertical_pin.contains(pos)
+                            || horisontal_pin.contains(pos)
+                            || right_diagonal_pin.contains(pos))
+                    {
+                        let m = format!(
+                            "{}{}x{}{}",
+                            (pos.1 + 97) as u8 as char,
+                            pos.0 + 1,
+                            (pos.1 + 96) as u8 as char,
+                            pos.0 + 2
+                        );
+                        if pos.0 == 6 {
+                            for piece in PIECE_SYMBOLS.iter() {
+                                all_moves.push(m.clone() + piece);
                             }
+                        } else {
+                            all_moves.push(m.clone());
                         }
-                        if pos.1 < 7 && state.board[pos.0 + 1][pos.1 + 1] < 0 {
-                            let m = format!(
-                                "{}{}x{}{}",
-                                (pos.1 + 97) as u8 as char,
-                                pos.0 + 1,
-                                (pos.1 + 98) as u8 as char,
-                                pos.0 + 2
-                            );
-                            if pos.0 == 6 {
-                                for piece in PIECE_SYMBOLS.iter() {
-                                    all_moves.push(m.clone() + piece);
-                                }
-                            } else {
-                                all_moves.push(m);
+                    }
+                    if pos.1 < 7
+                        && (state.board[pos.0 + 1][pos.1 + 1] < 0
+                            || (state.en_passant[pos.1 + 1] != 0 && pos.0 == 4))
+                        && !(vertical_pin.contains(pos)
+                            || horisontal_pin.contains(pos)
+                            || left_diagonal_pin.contains(pos))
+                    {
+                        let m = format!(
+                            "{}{}x{}{}",
+                            (pos.1 + 97) as u8 as char,
+                            pos.0 + 1,
+                            (pos.1 + 98) as u8 as char,
+                            pos.0 + 2
+                        );
+                        if pos.0 == 6 {
+                            for piece in PIECE_SYMBOLS.iter() {
+                                all_moves.push(m.clone() + piece);
                             }
-                        }
-                        if pos.0 == 1 && state.board[3][pos.0] == 0 {
-                            //White double pawn move
-                            let m = format!(
-                                "{}{}-{}{}",
-                                (pos.1 + 97) as u8 as char,
-                                2,
-                                (pos.1 + 97) as u8 as char,
-                                4
-                            );
+                        } else {
                             all_moves.push(m);
                         }
                     }
@@ -243,7 +258,7 @@ impl ChessState {
                 for pos in n_pos.iter() {
                     if !(vertical_pin.contains(pos)
                         || horisontal_pin.contains(pos)
-                        || horisontal_pin.contains(pos)
+                        || left_diagonal_pin.contains(pos)
                         || right_diagonal_pin.contains(pos))
                     {
                         for dir in KNIGHT_DIRECTIONS {
@@ -419,11 +434,15 @@ impl ChessState {
         //L
         else {
             //Black move generation
-            if ChessState::king_checked(&state, player) {
+            if danger_squares.contains(&k_pos) {
             } else {
                 //Pawns
                 for pos in p_pos.iter() {
-                    if state.board[pos.0 - 1][pos.1] == 0 {
+                    if state.board[pos.0 - 1][pos.1] == 0
+                        && !(horisontal_pin.contains(pos)
+                            || left_diagonal_pin.contains(pos)
+                            || right_diagonal_pin.contains(pos))
+                    {
                         let m = format!(
                             "{}{}-{}{}",
                             (pos.1 + 97) as u8 as char,
@@ -449,7 +468,13 @@ impl ChessState {
                             all_moves.push(m);
                         }
                     }
-                    if pos.1 > 0 && state.board[pos.0 - 1][pos.1 - 1] > 0 {
+                    if pos.1 > 0
+                        && (state.board[pos.0 - 1][pos.1 - 1] > 0
+                            || (state.en_passant[pos.1 - 1] != 0 && pos.0 == 3))
+                        && !(vertical_pin.contains(pos)
+                            || horisontal_pin.contains(pos)
+                            || left_diagonal_pin.contains(pos))
+                    {
                         let m = format!(
                             "{}{}x{}{}",
                             (pos.1 + 97) as u8 as char,
@@ -465,7 +490,13 @@ impl ChessState {
                             all_moves.push(m.clone());
                         }
                     }
-                    if pos.1 < 7 && state.board[pos.0 - 1][pos.1 + 1] > 0 {
+                    if pos.1 < 7
+                        && (state.board[pos.0 - 1][pos.1 + 1] > 0
+                            || (state.en_passant[pos.1 + 1] != 0 && pos.0 == 3))
+                        && !(vertical_pin.contains(pos)
+                            || horisontal_pin.contains(pos)
+                            || right_diagonal_pin.contains(pos))
+                    {
                         let m = format!(
                             "{}{}x{}{}",
                             (pos.1 + 97) as u8 as char,
@@ -585,7 +616,7 @@ impl ChessState {
                 for pos in n_pos.iter() {
                     if !(vertical_pin.contains(pos)
                         || horisontal_pin.contains(pos)
-                        || horisontal_pin.contains(pos)
+                        || left_diagonal_pin.contains(pos)
                         || right_diagonal_pin.contains(pos))
                     {
                         for dir in KNIGHT_DIRECTIONS {
@@ -990,11 +1021,7 @@ impl ChessState {
         return danger_squares;
     }
 
-    pub fn king_checked(state: &ChessState, player: bool) -> bool {
-        return false;
-    }
-
-    pub fn is_terminal() -> bool {
-        return false;
+    pub fn is_terminal(state: ChessState) -> bool {
+        return ChessState::get_all_possible_moves(state).len() != 0;
     }
 }
