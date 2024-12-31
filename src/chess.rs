@@ -106,7 +106,7 @@ impl ChessState {
         if en_passant_str == "-" {
             return;
         }
-        let pos: usize = (en_passant_str.chars().nth(0).unwrap() as u8 - 61) as usize;
+        let pos: usize = (en_passant_str.chars().nth(0).unwrap() as u8 - 97) as usize;
         en_passant_field[pos] = 1;
     }
 
