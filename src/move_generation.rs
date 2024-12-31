@@ -52,17 +52,38 @@ impl ChessState {
         }
         return (9, 9);
     }
-
     pub fn get_all_possible_moves(state: ChessState) -> Vec<String> {
+        let coefficient: i8 = if state.turn { 1 } else { -1 };
+        let danger_squares: HashSet<(usize, usize)> =
+            ChessState::danger_squares(state.board, coefficient);
+        let k_pos: (usize, usize) = ChessState::find_position(state.board, 6 * coefficient);
+        if danger_squares.contains(&k_pos) {
+            let mut all_moves: Vec<String> = Vec::new();
+            for pos_move in ChessState::raw_get_all_possible_moves(&state).iter() {
+                let mut new_state = ChessState::do_move(&state, pos_move);
+                new_state.turn = !new_state.turn;
+                if ChessState::danger_squares(new_state.board, coefficient)
+                    .contains(&ChessState::find_position(new_state.board, 6 * coefficient))
+                {
+                    all_moves.push(pos_move.clone());
+                }
+            }
+            return all_moves;
+        } else {
+            return ChessState::raw_get_all_possible_moves(&state);
+        }
+    }
+
+    fn raw_get_all_possible_moves(state: &ChessState) -> Vec<String> {
         let player: bool = state.turn;
         let coefficient: i8 = if player { 1 } else { -1 };
-
+        let back_rank: usize = if player { 0 } else { 7 };
         let mut all_moves: Vec<String> = Vec::new();
         let p_pos: Vec<(usize, usize)> = ChessState::find_positions(state.board, 1 * coefficient);
         let r_pos: Vec<(usize, usize)> = ChessState::find_positions(state.board, 2 * coefficient);
         let n_pos: Vec<(usize, usize)> = ChessState::find_positions(state.board, 3 * coefficient);
         let b_pos: Vec<(usize, usize)> = ChessState::find_positions(state.board, 4 * coefficient);
-        let q_pos: (usize, usize) = ChessState::find_position(state.board, 5 * coefficient);
+        let q_pos: Vec<(usize, usize)> = ChessState::find_positions(state.board, 5 * coefficient);
         let k_pos: (usize, usize) = ChessState::find_position(state.board, 6 * coefficient);
         let horisontal_pin: Vec<(usize, usize)> =
             ChessState::horisontal_pin(state.board, k_pos, coefficient);
@@ -74,709 +95,489 @@ impl ChessState {
             ChessState::right_diagonal_pin(state.board, k_pos, coefficient);
         let danger_squares: HashSet<(usize, usize)> =
             ChessState::danger_squares(state.board, coefficient);
-        if player {
-            //white move generation
-            if danger_squares.contains(&k_pos) {
-            } else {
-                //Pawns
-                for pos in p_pos.iter() {
-                    if state.board[pos.0 + 1][pos.1] == 0
-                        && !(horisontal_pin.contains(pos)
-                            || left_diagonal_pin.contains(pos)
-                            || right_diagonal_pin.contains(pos))
-                    {
-                        let m = format!(
-                            "{}{}-{}{}",
-                            (pos.1 + 97) as u8 as char,
-                            pos.0 + 1,
-                            (pos.1 + 97) as u8 as char,
-                            pos.0 + 2
-                        );
-                        if pos.0 == 1 && state.board[3][pos.1] == 0 {
-                            //White double pawn move
-                            all_moves.push(format!(
-                                "{}{}-{}{}",
-                                (pos.1 + 97) as u8 as char,
-                                2,
-                                (pos.1 + 97) as u8 as char,
-                                4
-                            ));
-                        }
-                        if pos.0 == 6 {
-                            for piece in PIECE_SYMBOLS.iter() {
-                                all_moves.push(m.clone() + piece);
-                            }
-                        } else {
-                            all_moves.push(m);
-                        }
-                    }
-                    if pos.1 > 0
-                        && (state.board[pos.0 + 1][pos.1 - 1] < 0
-                            || (state.en_passant[pos.1 - 1] != 0 && pos.0 == 4))
-                        && !(vertical_pin.contains(pos)
-                            || horisontal_pin.contains(pos)
-                            || right_diagonal_pin.contains(pos))
-                    {
-                        let m = format!(
-                            "{}{}x{}{}",
-                            (pos.1 + 97) as u8 as char,
-                            pos.0 + 1,
-                            (pos.1 + 96) as u8 as char,
-                            pos.0 + 2
-                        );
-                        if pos.0 == 6 {
-                            for piece in PIECE_SYMBOLS.iter() {
-                                all_moves.push(m.clone() + piece);
-                            }
-                        } else {
-                            all_moves.push(m.clone());
-                        }
-                    }
-                    if pos.1 < 7
-                        && (state.board[pos.0 + 1][pos.1 + 1] < 0
-                            || (state.en_passant[pos.1 + 1] != 0 && pos.0 == 4))
-                        && !(vertical_pin.contains(pos)
-                            || horisontal_pin.contains(pos)
-                            || left_diagonal_pin.contains(pos))
-                    {
-                        let m = format!(
-                            "{}{}x{}{}",
-                            (pos.1 + 97) as u8 as char,
-                            pos.0 + 1,
-                            (pos.1 + 98) as u8 as char,
-                            pos.0 + 2
-                        );
-                        if pos.0 == 6 {
-                            for piece in PIECE_SYMBOLS.iter() {
-                                all_moves.push(m.clone() + piece);
-                            }
-                        } else {
-                            all_moves.push(m);
-                        }
-                    }
-                }
-                for pos in r_pos.iter() {
-                    let mut possible: Vec<(usize, usize)> = Vec::new();
-                    if !(vertical_pin.contains(pos)
-                        || right_diagonal_pin.contains(pos)
-                        || left_diagonal_pin.contains(pos))
-                    {
-                        //Horisontal rook moves
-                        for dir in HORISONTAL {
-                            possible.append(&mut ChessState::directional_moves(
-                                state.board,
-                                *pos,
-                                dir,
-                                player,
-                            ));
-                        }
-                    }
-                    if !(horisontal_pin.contains(pos)
-                        || right_diagonal_pin.contains(pos)
-                        || left_diagonal_pin.contains(pos))
-                    {
-                        //Vertical rook moves
-                        for dir in VERTICAL {
-                            possible.append(&mut ChessState::directional_moves(
-                                state.board,
-                                *pos,
-                                dir,
-                                player,
-                            ));
-                        }
-                    }
-                    for new_pos in possible.iter() {
-                        all_moves.push(if state.board[new_pos.0][new_pos.1] == 0 {
-                            format!(
-                                "R{}{}-{}{}",
-                                (pos.1 + 97) as u8 as char,
-                                pos.0 + 1,
-                                (new_pos.1 + 97) as u8 as char,
-                                new_pos.0 + 1
-                            )
-                        } else {
-                            format!(
-                                "R{}{}x{}{}",
-                                (pos.1 + 97) as u8 as char,
-                                pos.0 + 1,
-                                (new_pos.1 + 97) as u8 as char,
-                                new_pos.0 + 1
-                            )
-                        });
-                    }
-                }
-                for pos in b_pos.iter() {
-                    let mut possible: Vec<(usize, usize)> = Vec::new();
-                    if !(vertical_pin.contains(pos)
-                        || horisontal_pin.contains(pos)
-                        || left_diagonal_pin.contains(pos))
-                    {
-                        //Horisontal rook moves
-                        for dir in RIGHT_DIAGONAL {
-                            possible.append(&mut ChessState::directional_moves(
-                                state.board,
-                                *pos,
-                                dir,
-                                player,
-                            ));
-                        }
-                    }
-                    if !(vertical_pin.contains(pos)
-                        || horisontal_pin.contains(pos)
-                        || right_diagonal_pin.contains(pos))
-                    {
-                        //Vertical rook moves
-                        for dir in LEFT_DIAGONAL {
-                            possible.append(&mut ChessState::directional_moves(
-                                state.board,
-                                *pos,
-                                dir,
-                                player,
-                            ));
-                        }
-                    }
-                    for new_pos in possible.iter() {
-                        all_moves.push(if state.board[new_pos.0][new_pos.1] == 0 {
-                            format!(
-                                "B{}{}-{}{}",
-                                (pos.1 + 97) as u8 as char,
-                                pos.0 + 1,
-                                (new_pos.1 + 97) as u8 as char,
-                                new_pos.0 + 1
-                            )
-                        } else {
-                            format!(
-                                "B{}{}x{}{}",
-                                (pos.1 + 97) as u8 as char,
-                                pos.0 + 1,
-                                (new_pos.1 + 97) as u8 as char,
-                                new_pos.0 + 1
-                            )
-                        });
-                    }
-                }
-                for pos in n_pos.iter() {
-                    if !(vertical_pin.contains(pos)
-                        || horisontal_pin.contains(pos)
-                        || left_diagonal_pin.contains(pos)
-                        || right_diagonal_pin.contains(pos))
-                    {
-                        for dir in KNIGHT_DIRECTIONS {
-                            let new_pos = (pos.0 as i8 + dir.0, pos.1 as i8 + dir.1);
-                            if -1 < new_pos.0 && new_pos.0 < 8 && -1 < new_pos.1 && new_pos.1 < 7 {
-                                if state.board[new_pos.0 as usize][new_pos.1 as usize] < 1 {
-                                    all_moves.push(
-                                        if state.board[new_pos.0 as usize][new_pos.1 as usize] == 0
-                                        {
-                                            format!(
-                                                "N{}{}-{}{}",
-                                                (pos.1 + 97) as u8 as char,
-                                                pos.0 + 1,
-                                                (new_pos.1 + 97) as u8 as char,
-                                                new_pos.0 + 1
-                                            )
-                                        } else {
-                                            format!(
-                                                "N{}{}x{}{}",
-                                                (pos.1 + 97) as u8 as char,
-                                                pos.0 + 1,
-                                                (new_pos.1 + 97) as u8 as char,
-                                                new_pos.0 + 1
-                                            )
-                                        },
-                                    );
-                                }
-                            }
-                        }
-                    }
-                }
-                if q_pos.0 != 9 {
-                    let mut possible: Vec<(usize, usize)> = Vec::new();
-                    if !(vertical_pin.contains(&q_pos)
-                        || horisontal_pin.contains(&q_pos)
-                        || left_diagonal_pin.contains(&q_pos))
-                    {
-                        for dir in RIGHT_DIAGONAL {
-                            possible.append(&mut ChessState::directional_moves(
-                                state.board,
-                                q_pos,
-                                dir,
-                                player,
-                            ));
-                        }
-                    }
 
-                    if !(vertical_pin.contains(&q_pos)
-                        || horisontal_pin.contains(&q_pos)
-                        || right_diagonal_pin.contains(&q_pos))
-                    {
-                        for dir in LEFT_DIAGONAL {
-                            possible.append(&mut ChessState::directional_moves(
-                                state.board,
-                                q_pos,
-                                dir,
-                                player,
-                            ));
-                        }
-                    }
+        (if player {
+            all_moves.append(&mut ChessState::white_pawn_moves(
+                &state,
+                &vertical_pin,
+                &horisontal_pin,
+                &left_diagonal_pin,
+                &right_diagonal_pin,
+                &p_pos,
+            ))
+        } else {
+            all_moves.append(&mut ChessState::black_pawn_moves(
+                &state,
+                &vertical_pin,
+                &horisontal_pin,
+                &left_diagonal_pin,
+                &right_diagonal_pin,
+                &p_pos,
+            ));
+        });
+        all_moves.append(&mut ChessState::straight_moves(
+            &state,
+            &vertical_pin,
+            &horisontal_pin,
+            &left_diagonal_pin,
+            &right_diagonal_pin,
+            &r_pos,
+            player,
+            "R",
+        ));
+        all_moves.append(&mut ChessState::diagonal_moves(
+            &state,
+            &vertical_pin,
+            &horisontal_pin,
+            &left_diagonal_pin,
+            &right_diagonal_pin,
+            &b_pos,
+            player,
+            "B",
+        ));
 
-                    if !(vertical_pin.contains(&q_pos)
-                        || right_diagonal_pin.contains(&q_pos)
-                        || left_diagonal_pin.contains(&q_pos))
-                    {
-                        for dir in HORISONTAL {
-                            possible.append(&mut ChessState::directional_moves(
-                                state.board,
-                                q_pos,
-                                dir,
-                                player,
-                            ));
-                        }
-                    }
+        all_moves.append(&mut ChessState::straight_moves(
+            &state,
+            &vertical_pin,
+            &horisontal_pin,
+            &left_diagonal_pin,
+            &right_diagonal_pin,
+            &q_pos,
+            player,
+            "Q",
+        ));
+        all_moves.append(&mut ChessState::diagonal_moves(
+            &state,
+            &vertical_pin,
+            &horisontal_pin,
+            &left_diagonal_pin,
+            &right_diagonal_pin,
+            &q_pos,
+            player,
+            "Q",
+        ));
+        all_moves.append(&mut ChessState::knight_moves(
+            &state,
+            &vertical_pin,
+            &horisontal_pin,
+            &left_diagonal_pin,
+            &right_diagonal_pin,
+            &n_pos,
+        ));
+        all_moves.append(&mut ChessState::king_moves(
+            &state,
+            &danger_squares,
+            k_pos,
+            back_rank,
+        ));
+        return all_moves;
+    }
 
-                    if !(right_diagonal_pin.contains(&q_pos)
-                        || horisontal_pin.contains(&q_pos)
-                        || left_diagonal_pin.contains(&q_pos))
-                    {
-                        {
-                            for dir in VERTICAL {
-                                possible.append(&mut ChessState::directional_moves(
-                                    state.board,
-                                    q_pos,
-                                    dir,
-                                    player,
-                                ))
-                            }
-                        }
-                    }
-                    for new_pos in possible.iter() {
-                        all_moves.push(if state.board[new_pos.0][new_pos.1] == 0 {
-                            format!(
-                                "Q{}{}-{}{}",
-                                (q_pos.1 + 97) as u8 as char,
-                                q_pos.0 + 1,
-                                (new_pos.1 + 97) as u8 as char,
-                                new_pos.0 + 1
-                            )
-                        } else {
-                            format!(
-                                "Q{}{}x{}{}",
-                                (q_pos.1 + 97) as u8 as char,
-                                q_pos.0 + 1,
-                                (new_pos.1 + 97) as u8 as char,
-                                new_pos.0 + 1
-                            )
-                        });
-                    }
+    fn white_pawn_moves(
+        state: &ChessState,
+        vertical_pin: &Vec<(usize, usize)>,
+        horisontal_pin: &Vec<(usize, usize)>,
+        left_diagonal_pin: &Vec<(usize, usize)>,
+        right_diagonal_pin: &Vec<(usize, usize)>,
+        p_pos: &Vec<(usize, usize)>,
+    ) -> Vec<String> {
+        let mut all_moves = Vec::new();
+        for pos in p_pos.iter() {
+            if state.board[pos.0 + 1][pos.1] == 0
+                && !(horisontal_pin.contains(pos)
+                    || left_diagonal_pin.contains(pos)
+                    || right_diagonal_pin.contains(pos))
+            {
+                let m = format!(
+                    "{}{}-{}{}",
+                    (pos.1 + 97) as u8 as char,
+                    pos.0 + 1,
+                    (pos.1 + 97) as u8 as char,
+                    pos.0 + 2
+                );
+                if pos.0 == 1 && state.board[3][pos.1] == 0 {
+                    //White double pawn move
+                    all_moves.push(format!(
+                        "{}{}-{}{}",
+                        (pos.1 + 97) as u8 as char,
+                        2,
+                        (pos.1 + 97) as u8 as char,
+                        4
+                    ));
                 }
-                if k_pos.0 != 9 {
-                    for dir in KING_DIRECTIONS {
-                        let new_pos: (i8, i8) = (k_pos.0 as i8 + dir.0, k_pos.1 as i8 + dir.1);
-                        if -1 < new_pos.0
-                            && new_pos.0 < 8
-                            && -1 < new_pos.1
-                            && new_pos.1 < 8
-                            && !danger_squares.contains(&(new_pos.0 as usize, new_pos.1 as usize))
-                        {
+                if pos.0 == 6 {
+                    for piece in PIECE_SYMBOLS.iter() {
+                        all_moves.push(m.clone() + piece);
+                    }
+                } else {
+                    all_moves.push(m);
+                }
+            }
+            if pos.1 > 0
+                && (state.board[pos.0 + 1][pos.1 - 1] < 0
+                    || (state.en_passant[pos.1 - 1] != 0 && pos.0 == 4))
+                && !(vertical_pin.contains(pos)
+                    || horisontal_pin.contains(pos)
+                    || right_diagonal_pin.contains(pos))
+            {
+                let m = format!(
+                    "{}{}x{}{}",
+                    (pos.1 + 97) as u8 as char,
+                    pos.0 + 1,
+                    (pos.1 + 96) as u8 as char,
+                    pos.0 + 2
+                );
+                if pos.0 == 6 {
+                    for piece in PIECE_SYMBOLS.iter() {
+                        all_moves.push(m.clone() + piece);
+                    }
+                } else {
+                    all_moves.push(m.clone());
+                }
+            }
+            if pos.1 < 7
+                && (state.board[pos.0 + 1][pos.1 + 1] < 0
+                    || (state.en_passant[pos.1 + 1] != 0 && pos.0 == 4))
+                && !(vertical_pin.contains(pos)
+                    || horisontal_pin.contains(pos)
+                    || left_diagonal_pin.contains(pos))
+            {
+                let m = format!(
+                    "{}{}x{}{}",
+                    (pos.1 + 97) as u8 as char,
+                    pos.0 + 1,
+                    (pos.1 + 98) as u8 as char,
+                    pos.0 + 2
+                );
+                if pos.0 == 6 {
+                    for piece in PIECE_SYMBOLS.iter() {
+                        all_moves.push(m.clone() + piece);
+                    }
+                } else {
+                    all_moves.push(m);
+                }
+            }
+        }
+        return all_moves;
+    }
+    fn black_pawn_moves(
+        state: &ChessState,
+        vertical_pin: &Vec<(usize, usize)>,
+        horisontal_pin: &Vec<(usize, usize)>,
+        left_diagonal_pin: &Vec<(usize, usize)>,
+        right_diagonal_pin: &Vec<(usize, usize)>,
+        p_pos: &Vec<(usize, usize)>,
+    ) -> Vec<String> {
+        let mut all_moves: Vec<String> = Vec::new();
+        for pos in p_pos.iter() {
+            if state.board[pos.0 - 1][pos.1] == 0
+                && !(horisontal_pin.contains(pos)
+                    || left_diagonal_pin.contains(pos)
+                    || right_diagonal_pin.contains(pos))
+            {
+                let m = format!(
+                    "{}{}-{}{}",
+                    (pos.1 + 97) as u8 as char,
+                    pos.0 + 1,
+                    (pos.1 + 97) as u8 as char,
+                    pos.0
+                );
+                if pos.0 == 6 && state.board[4][pos.1] == 0 {
+                    //Black double pawn move
+                    let m = format!(
+                        "{}{}-{}{}",
+                        (pos.0 + 97) as u8 as char,
+                        pos.1 + 1,
+                        (pos.0 + 97) as u8 as char,
+                        pos.1 - 1
+                    );
+                    all_moves.push(m);
+                } else if pos.0 == 1 {
+                    for piece in PIECE_SYMBOLS.iter() {
+                        all_moves.push(m.clone() + piece);
+                    }
+                } else {
+                    all_moves.push(m);
+                }
+            }
+            if pos.1 > 0
+                && (state.board[pos.0 - 1][pos.1 - 1] > 0
+                    || (state.en_passant[pos.1 - 1] != 0 && pos.0 == 3))
+                && !(vertical_pin.contains(pos)
+                    || horisontal_pin.contains(pos)
+                    || left_diagonal_pin.contains(pos))
+            {
+                let m = format!(
+                    "{}{}x{}{}",
+                    (pos.1 + 97) as u8 as char,
+                    pos.0 + 1,
+                    (pos.1 + 96) as u8 as char,
+                    pos.0
+                );
+                if pos.0 == 1 {
+                    for piece in PIECE_SYMBOLS.iter() {
+                        all_moves.push(m.clone() + piece);
+                    }
+                } else {
+                    all_moves.push(m.clone());
+                }
+            }
+            if pos.1 < 7
+                && (state.board[pos.0 - 1][pos.1 + 1] > 0
+                    || (state.en_passant[pos.1 + 1] != 0 && pos.0 == 3))
+                && !(vertical_pin.contains(pos)
+                    || horisontal_pin.contains(pos)
+                    || right_diagonal_pin.contains(pos))
+            {
+                let m = format!(
+                    "{}{}x{}{}",
+                    (pos.1 + 97) as u8 as char,
+                    pos.0 + 1,
+                    (pos.1 + 98) as u8 as char,
+                    pos.0
+                );
+                if pos.0 == 1 {
+                    for piece in PIECE_SYMBOLS.iter() {
+                        all_moves.push(m.clone() + piece);
+                    }
+                } else {
+                    all_moves.push(m);
+                }
+            }
+        }
+        return all_moves;
+    }
+    fn straight_moves(
+        state: &ChessState,
+        vertical_pin: &Vec<(usize, usize)>,
+        horisontal_pin: &Vec<(usize, usize)>,
+        left_diagonal_pin: &Vec<(usize, usize)>,
+        right_diagonal_pin: &Vec<(usize, usize)>,
+        s_pos: &Vec<(usize, usize)>,
+        player: bool,
+        sign: &str,
+    ) -> Vec<String> {
+        let mut all_moves: Vec<String> = Vec::new();
+        for pos in s_pos.iter() {
+            let mut possible: Vec<(usize, usize)> = Vec::new();
+            if !(vertical_pin.contains(pos)
+                || right_diagonal_pin.contains(pos)
+                || left_diagonal_pin.contains(pos))
+            {
+                //Horisontal rook moves
+                for dir in HORISONTAL {
+                    possible.append(&mut ChessState::directional_moves(
+                        state.board,
+                        *pos,
+                        dir,
+                        player,
+                    ));
+                }
+            }
+            if !(horisontal_pin.contains(pos)
+                || right_diagonal_pin.contains(pos)
+                || left_diagonal_pin.contains(pos))
+            {
+                //Vertical rook moves
+                for dir in VERTICAL {
+                    possible.append(&mut ChessState::directional_moves(
+                        state.board,
+                        *pos,
+                        dir,
+                        player,
+                    ));
+                }
+            }
+            for new_pos in possible.iter() {
+                all_moves.push(if state.board[new_pos.0][new_pos.1] == 0 {
+                    format!(
+                        "{}{}{}-{}{}",
+                        sign,
+                        (pos.1 + 97) as u8 as char,
+                        pos.0 + 1,
+                        (new_pos.1 + 97) as u8 as char,
+                        new_pos.0 + 1
+                    )
+                } else {
+                    format!(
+                        "{}{}{}x{}{}",
+                        sign,
+                        (pos.1 + 97) as u8 as char,
+                        pos.0 + 1,
+                        (new_pos.1 + 97) as u8 as char,
+                        new_pos.0 + 1
+                    )
+                });
+            }
+        }
+        return all_moves;
+    }
+    fn diagonal_moves(
+        state: &ChessState,
+        vertical_pin: &Vec<(usize, usize)>,
+        horisontal_pin: &Vec<(usize, usize)>,
+        left_diagonal_pin: &Vec<(usize, usize)>,
+        right_diagonal_pin: &Vec<(usize, usize)>,
+        d_pos: &Vec<(usize, usize)>,
+        player: bool,
+        sign: &str,
+    ) -> Vec<String> {
+        let mut all_moves: Vec<String> = Vec::new();
+        for pos in d_pos.iter() {
+            let mut possible: Vec<(usize, usize)> = Vec::new();
+            if !(vertical_pin.contains(pos)
+                || horisontal_pin.contains(pos)
+                || left_diagonal_pin.contains(pos))
+            {
+                //Horisontal rook moves
+                for dir in RIGHT_DIAGONAL {
+                    possible.append(&mut ChessState::directional_moves(
+                        state.board,
+                        *pos,
+                        dir,
+                        player,
+                    ));
+                }
+            }
+            if !(vertical_pin.contains(pos)
+                || horisontal_pin.contains(pos)
+                || right_diagonal_pin.contains(pos))
+            {
+                //Vertical rook moves
+                for dir in LEFT_DIAGONAL {
+                    possible.append(&mut ChessState::directional_moves(
+                        state.board,
+                        *pos,
+                        dir,
+                        player,
+                    ));
+                }
+            }
+            for new_pos in possible.iter() {
+                all_moves.push(if state.board[new_pos.0][new_pos.1] == 0 {
+                    format!(
+                        "{}{}{}-{}{}",
+                        sign,
+                        (pos.1 + 97) as u8 as char,
+                        pos.0 + 1,
+                        (new_pos.1 + 97) as u8 as char,
+                        new_pos.0 + 1
+                    )
+                } else {
+                    format!(
+                        "{}{}{}x{}{}",
+                        sign,
+                        (pos.1 + 97) as u8 as char,
+                        pos.0 + 1,
+                        (new_pos.1 + 97) as u8 as char,
+                        new_pos.0 + 1
+                    )
+                });
+            }
+        }
+        return all_moves;
+    }
+    fn knight_moves(
+        state: &ChessState,
+        vertical_pin: &Vec<(usize, usize)>,
+        horisontal_pin: &Vec<(usize, usize)>,
+        left_diagonal_pin: &Vec<(usize, usize)>,
+        right_diagonal_pin: &Vec<(usize, usize)>,
+        n_pos: &Vec<(usize, usize)>,
+    ) -> Vec<String> {
+        let mut all_moves: Vec<String> = Vec::new();
+        for pos in n_pos.iter() {
+            if !(vertical_pin.contains(pos)
+                || horisontal_pin.contains(pos)
+                || left_diagonal_pin.contains(pos)
+                || right_diagonal_pin.contains(pos))
+            {
+                for dir in KNIGHT_DIRECTIONS {
+                    let new_pos = (pos.0 as i8 + dir.0, pos.1 as i8 + dir.1);
+                    if -1 < new_pos.0 && new_pos.0 < 8 && -1 < new_pos.1 && new_pos.1 < 7 {
+                        if state.board[new_pos.0 as usize][new_pos.1 as usize] < 1 {
                             all_moves.push(
                                 if state.board[new_pos.0 as usize][new_pos.1 as usize] == 0 {
                                     format!(
-                                        "K{}{}-{}{}",
-                                        (k_pos.1 + 97) as u8 as char,
-                                        k_pos.0 + 1,
+                                        "N{}{}-{}{}",
+                                        (pos.1 + 97) as u8 as char,
+                                        pos.0 + 1,
                                         (new_pos.1 + 97) as u8 as char,
                                         new_pos.0 + 1
                                     )
                                 } else {
                                     format!(
-                                        "K{}{}x{}{}",
-                                        (k_pos.1 + 97) as u8 as char,
-                                        k_pos.0 + 1,
+                                        "N{}{}x{}{}",
+                                        (pos.1 + 97) as u8 as char,
+                                        pos.0 + 1,
                                         (new_pos.1 + 97) as u8 as char,
                                         new_pos.0 + 1
                                     )
                                 },
                             );
                         }
-                    }
-                    // White castling
-                    if state.castling.contains("K")
-                        && state.board[0][5] == 0
-                        && state.board[0][6] == 0
-                        && !danger_squares.contains(&(0, 5))
-                        && !danger_squares.contains(&(0, 6))
-                    {
-                        all_moves.push("O-O".into())
-                    }
-                    if state.castling.contains("Q")
-                        && state.board[0][1] == 0
-                        && state.board[0][2] == 0
-                        && state.board[0][3] == 0
-                        && !danger_squares.contains(&(0, 1))
-                        && !danger_squares.contains(&(0, 2))
-                        && !danger_squares.contains(&(0, 3))
-                    {
-                        all_moves.push("O-O-O".into())
                     }
                 }
             }
         }
-        //L
-        //L
-        //L
-        //L
-        //L
-        //L
-        //L
-        //L
-        //L
-        //L
-        //L
-        else {
-            //Black move generation
-            if danger_squares.contains(&k_pos) {
-            } else {
-                //Pawns
-                for pos in p_pos.iter() {
-                    if state.board[pos.0 - 1][pos.1] == 0
-                        && !(horisontal_pin.contains(pos)
-                            || left_diagonal_pin.contains(pos)
-                            || right_diagonal_pin.contains(pos))
-                    {
-                        let m = format!(
-                            "{}{}-{}{}",
-                            (pos.1 + 97) as u8 as char,
-                            pos.0 + 1,
-                            (pos.1 + 97) as u8 as char,
-                            pos.0
-                        );
-                        if pos.0 == 6 && state.board[4][pos.1] == 0 {
-                            //Black double pawn move
-                            let m = format!(
-                                "{}{}-{}{}",
-                                (pos.0 + 97) as u8 as char,
-                                pos.1 + 1,
-                                (pos.0 + 97) as u8 as char,
-                                pos.1 - 1
-                            );
-                            all_moves.push(m);
-                        } else if pos.0 == 1 {
-                            for piece in PIECE_SYMBOLS.iter() {
-                                all_moves.push(m.clone() + piece);
-                            }
-                        } else {
-                            all_moves.push(m);
-                        }
-                    }
-                    if pos.1 > 0
-                        && (state.board[pos.0 - 1][pos.1 - 1] > 0
-                            || (state.en_passant[pos.1 - 1] != 0 && pos.0 == 3))
-                        && !(vertical_pin.contains(pos)
-                            || horisontal_pin.contains(pos)
-                            || left_diagonal_pin.contains(pos))
-                    {
-                        let m = format!(
-                            "{}{}x{}{}",
-                            (pos.1 + 97) as u8 as char,
-                            pos.0 + 1,
-                            (pos.1 + 96) as u8 as char,
-                            pos.0
-                        );
-                        if pos.0 == 1 {
-                            for piece in PIECE_SYMBOLS.iter() {
-                                all_moves.push(m.clone() + piece);
-                            }
-                        } else {
-                            all_moves.push(m.clone());
-                        }
-                    }
-                    if pos.1 < 7
-                        && (state.board[pos.0 - 1][pos.1 + 1] > 0
-                            || (state.en_passant[pos.1 + 1] != 0 && pos.0 == 3))
-                        && !(vertical_pin.contains(pos)
-                            || horisontal_pin.contains(pos)
-                            || right_diagonal_pin.contains(pos))
-                    {
-                        let m = format!(
-                            "{}{}x{}{}",
-                            (pos.1 + 97) as u8 as char,
-                            pos.0 + 1,
-                            (pos.1 + 98) as u8 as char,
-                            pos.0
-                        );
-                        if pos.0 == 1 {
-                            for piece in PIECE_SYMBOLS.iter() {
-                                all_moves.push(m.clone() + piece);
-                            }
-                        } else {
-                            all_moves.push(m);
-                        }
-                    }
-                }
-                for pos in r_pos.iter() {
-                    let mut possible: Vec<(usize, usize)> = Vec::new();
-                    if !(vertical_pin.contains(pos)
-                        || right_diagonal_pin.contains(pos)
-                        || left_diagonal_pin.contains(pos))
-                    {
-                        //Horisontal rook moves
-                        for dir in HORISONTAL {
-                            possible.append(&mut ChessState::directional_moves(
-                                state.board,
-                                *pos,
-                                dir,
-                                player,
-                            ));
-                        }
-                    }
-                    if !(horisontal_pin.contains(pos)
-                        || right_diagonal_pin.contains(pos)
-                        || left_diagonal_pin.contains(pos))
-                    {
-                        //Vertical rook moves
-                        for dir in VERTICAL {
-                            possible.append(&mut ChessState::directional_moves(
-                                state.board,
-                                *pos,
-                                dir,
-                                player,
-                            ));
-                        }
-                    }
-                    for new_pos in possible.iter() {
-                        all_moves.push(if state.board[new_pos.0][new_pos.1] == 0 {
-                            format!(
-                                "R{}{}-{}{}",
-                                (pos.1 + 97) as u8 as char,
-                                pos.0 + 1,
-                                (new_pos.1 + 97) as u8 as char,
-                                new_pos.0 + 1
-                            )
-                        } else {
-                            format!(
-                                "R{}{}x{}{}",
-                                (pos.1 + 97) as u8 as char,
-                                pos.0 + 1,
-                                (new_pos.1 + 97) as u8 as char,
-                                new_pos.0 + 1
-                            )
-                        });
-                    }
-                }
-                for pos in b_pos.iter() {
-                    let mut possible: Vec<(usize, usize)> = Vec::new();
-                    if !(vertical_pin.contains(pos)
-                        || horisontal_pin.contains(pos)
-                        || left_diagonal_pin.contains(pos))
-                    {
-                        //Horisontal rook moves
-                        for dir in RIGHT_DIAGONAL {
-                            possible.append(&mut ChessState::directional_moves(
-                                state.board,
-                                *pos,
-                                dir,
-                                player,
-                            ));
-                        }
-                    }
-                    if !(vertical_pin.contains(pos)
-                        || horisontal_pin.contains(pos)
-                        || right_diagonal_pin.contains(pos))
-                    {
-                        //Vertical rook moves
-                        for dir in LEFT_DIAGONAL {
-                            possible.append(&mut ChessState::directional_moves(
-                                state.board,
-                                *pos,
-                                dir,
-                                player,
-                            ));
-                        }
-                    }
-                    for new_pos in possible.iter() {
-                        all_moves.push(if state.board[new_pos.0][new_pos.1] == 0 {
-                            format!(
-                                "B{}{}-{}{}",
-                                (pos.1 + 97) as u8 as char,
-                                pos.0 + 1,
-                                (new_pos.1 + 97) as u8 as char,
-                                new_pos.0 + 1
-                            )
-                        } else {
-                            format!(
-                                "B{}{}x{}{}",
-                                (pos.1 + 97) as u8 as char,
-                                pos.0 + 1,
-                                (new_pos.1 + 97) as u8 as char,
-                                new_pos.0 + 1
-                            )
-                        });
-                    }
-                }
-                for pos in n_pos.iter() {
-                    if !(vertical_pin.contains(pos)
-                        || horisontal_pin.contains(pos)
-                        || left_diagonal_pin.contains(pos)
-                        || right_diagonal_pin.contains(pos))
-                    {
-                        for dir in KNIGHT_DIRECTIONS {
-                            let new_pos = (pos.0 as i8 + dir.0, pos.1 as i8 + dir.1);
-                            if -1 < new_pos.0 && new_pos.0 < 8 && -1 < new_pos.1 && new_pos.1 < 7 {
-                                if state.board[new_pos.0 as usize][new_pos.1 as usize] < 1 {
-                                    all_moves.push(
-                                        if state.board[new_pos.0 as usize][new_pos.1 as usize] == 0
-                                        {
-                                            format!(
-                                                "N{}{}-{}{}",
-                                                (pos.1 + 97) as u8 as char,
-                                                pos.0 + 1,
-                                                (new_pos.1 + 97) as u8 as char,
-                                                new_pos.0 + 1
-                                            )
-                                        } else {
-                                            format!(
-                                                "N{}{}x{}{}",
-                                                (pos.1 + 97) as u8 as char,
-                                                pos.0 + 1,
-                                                (new_pos.1 + 97) as u8 as char,
-                                                new_pos.0 + 1
-                                            )
-                                        },
-                                    );
-                                }
-                            }
-                        }
-                    }
-                }
-                if q_pos.0 != 9 {
-                    let mut possible: Vec<(usize, usize)> = Vec::new();
-                    if !(vertical_pin.contains(&q_pos)
-                        || horisontal_pin.contains(&q_pos)
-                        || left_diagonal_pin.contains(&q_pos))
-                    {
-                        for dir in RIGHT_DIAGONAL {
-                            possible.append(&mut ChessState::directional_moves(
-                                state.board,
-                                q_pos,
-                                dir,
-                                player,
-                            ));
-                        }
-                    }
-
-                    if !(vertical_pin.contains(&q_pos)
-                        || horisontal_pin.contains(&q_pos)
-                        || right_diagonal_pin.contains(&q_pos))
-                    {
-                        for dir in LEFT_DIAGONAL {
-                            possible.append(&mut ChessState::directional_moves(
-                                state.board,
-                                q_pos,
-                                dir,
-                                player,
-                            ));
-                        }
-                    }
-
-                    if !(vertical_pin.contains(&q_pos)
-                        || right_diagonal_pin.contains(&q_pos)
-                        || left_diagonal_pin.contains(&q_pos))
-                    {
-                        for dir in HORISONTAL {
-                            possible.append(&mut ChessState::directional_moves(
-                                state.board,
-                                q_pos,
-                                dir,
-                                player,
-                            ));
-                        }
-                    }
-
-                    if !(right_diagonal_pin.contains(&q_pos)
-                        || horisontal_pin.contains(&q_pos)
-                        || left_diagonal_pin.contains(&q_pos))
-                    {
-                        {
-                            for dir in VERTICAL {
-                                possible.append(&mut ChessState::directional_moves(
-                                    state.board,
-                                    q_pos,
-                                    dir,
-                                    player,
-                                ))
-                            }
-                        }
-                    }
-                    for new_pos in possible.iter() {
-                        all_moves.push(if state.board[new_pos.0][new_pos.1] == 0 {
-                            format!(
-                                "Q{}{}-{}{}",
-                                (q_pos.1 + 97) as u8 as char,
-                                q_pos.0 + 1,
-                                (new_pos.1 + 97) as u8 as char,
-                                new_pos.0 + 1
-                            )
-                        } else {
-                            format!(
-                                "Q{}{}x{}{}",
-                                (q_pos.1 + 97) as u8 as char,
-                                q_pos.0 + 1,
-                                (new_pos.1 + 97) as u8 as char,
-                                new_pos.0 + 1
-                            )
-                        });
-                    }
-                }
-                if k_pos.0 != 9 {
-                    for dir in KING_DIRECTIONS {
-                        let new_pos: (i8, i8) = (k_pos.0 as i8 + dir.0, k_pos.1 as i8 + dir.1);
-                        if -1 < new_pos.0
-                            && new_pos.0 < 8
-                            && -1 < new_pos.1
-                            && new_pos.1 < 7
-                            && !danger_squares.contains(&(new_pos.0 as usize, new_pos.1 as usize))
-                        {
-                            all_moves.push(
-                                if state.board[new_pos.0 as usize][new_pos.1 as usize] == 0 {
-                                    format!(
-                                        "K{}{}-{}{}",
-                                        (k_pos.1 + 97) as u8 as char,
-                                        k_pos.0 + 1,
-                                        (new_pos.1 + 97) as u8 as char,
-                                        new_pos.0 + 1
-                                    )
-                                } else {
-                                    format!(
-                                        "K{}{}x{}{}",
-                                        (q_pos.1 + 97) as u8 as char,
-                                        q_pos.0 + 1,
-                                        (new_pos.1 + 97) as u8 as char,
-                                        new_pos.0 + 1
-                                    )
-                                },
-                            );
-                        }
-                    }
-                    if state.castling.contains("k")
-                        && state.board[7][5] == 0
-                        && state.board[7][6] == 0
-                        && !danger_squares.contains(&(7, 5))
-                        && !danger_squares.contains(&(7, 6))
-                    {
-                        all_moves.push("O-O".into())
-                    }
-                    if state.castling.contains("q")
-                        && state.board[7][1] == 0
-                        && state.board[7][2] == 0
-                        && state.board[7][3] == 0
-                        && !danger_squares.contains(&(7, 1))
-                        && !danger_squares.contains(&(7, 2))
-                        && !danger_squares.contains(&(7, 3))
-                    {
-                        all_moves.push("O-O-O".into())
-                    }
-                }
+        return all_moves;
+    }
+    fn king_moves(
+        state: &ChessState,
+        danger_squares: &HashSet<(usize, usize)>,
+        k_pos: (usize, usize),
+        back_rank: usize,
+    ) -> Vec<String> {
+        let mut all_moves: Vec<String> = Vec::new();
+        for dir in KING_DIRECTIONS {
+            let new_pos: (i8, i8) = (k_pos.0 as i8 + dir.0, k_pos.1 as i8 + dir.1);
+            if -1 < new_pos.0
+                && new_pos.0 < 8
+                && -1 < new_pos.1
+                && new_pos.1 < 8
+                && !danger_squares.contains(&(new_pos.0 as usize, new_pos.1 as usize))
+                && state.board[new_pos.0 as usize][new_pos.1 as usize] < 1
+            {
+                all_moves.push(
+                    if state.board[new_pos.0 as usize][new_pos.1 as usize] == 0 {
+                        format!(
+                            "K{}{}-{}{}",
+                            (k_pos.1 + 97) as u8 as char,
+                            k_pos.0 + 1,
+                            (new_pos.1 + 97) as u8 as char,
+                            new_pos.0 + 1
+                        )
+                    } else {
+                        format!(
+                            "K{}{}x{}{}",
+                            (k_pos.1 + 97) as u8 as char,
+                            k_pos.0 + 1,
+                            (new_pos.1 + 97) as u8 as char,
+                            new_pos.0 + 1
+                        )
+                    },
+                );
             }
+        }
+        if state.castling.contains("K")
+            && state.board[back_rank][5] == 0
+            && state.board[back_rank][6] == 0
+            && !danger_squares.contains(&(back_rank, 4))
+            && !danger_squares.contains(&(back_rank, 5))
+            && !danger_squares.contains(&(back_rank, 6))
+        {
+            all_moves.push("O-O".into())
+        }
+        if state.castling.contains("Q")
+            && state.board[back_rank][1] == 0
+            && state.board[back_rank][2] == 0
+            && state.board[back_rank][3] == 0
+            && !danger_squares.contains(&(back_rank, 1))
+            && !danger_squares.contains(&(back_rank, 2))
+            && !danger_squares.contains(&(back_rank, 3))
+            && !danger_squares.contains(&(back_rank, 4))
+        {
+            all_moves.push("O-O-O".into())
         }
         return all_moves;
     }
