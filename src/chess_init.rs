@@ -1,17 +1,4 @@
 use std::str;
-
-const HORISONTAL_DIRECTIONS: [(i8, i8); 4] = [(1, 1), (1, -1), (-1, 1), (-1, -1)];
-const VERTICAL_DIRECTIONS: [(i8, i8); 4] = [(1, 0), (-1, 0), (0, 1), (0, -1)];
-const ROOK_DIRECTIONS: [(i8, i8); 8] = [
-    (1, 2),
-    (-1, 2),
-    (1, -2),
-    (-1, -2),
-    (2, -1),
-    (2, 1),
-    (-2, 1),
-    (-2, -1),
-];
 const BLACK_PIECE_INDICIES: &str = " prnbqk";
 const WHITE_PIECE_INDICIES: &str = " PRNBQK";
 
@@ -110,11 +97,14 @@ impl ChessState {
         en_passant_field[pos] = 1;
     }
 
-    pub fn eval(state: ChessState) -> i32 {
-        return 0;
-    }
-
-    pub fn do_move(state: ChessState, _move: String) -> ChessState {
-        return ChessState::new_board();
+    pub fn copy(&self) -> ChessState {
+        ChessState {
+            board: self.board.clone(),
+            turn: self.turn,
+            en_passant: self.en_passant.clone(),
+            castling: self.castling.clone(),
+            halfmoves: self.halfmoves.clone(),
+            fullmoves: self.fullmoves.clone(),
+        }
     }
 }

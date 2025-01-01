@@ -1,6 +1,6 @@
 use std::{collections::HashSet, usize};
 
-use crate::chess::ChessState;
+use crate::chess_init::ChessState;
 
 const VERTICAL: [(i8, i8); 2] = [(1, 0), (-1, 0)];
 const HORISONTAL: [(i8, i8); 2] = [(0, 1), (0, -1)]; //
@@ -60,9 +60,14 @@ impl ChessState {
         if danger_squares.contains(&k_pos) {
             let mut all_moves: Vec<String> = Vec::new();
             for pos_move in ChessState::raw_get_all_possible_moves(&state).iter() {
-                let mut new_state = ChessState::do_move(&state, pos_move);
+                println!("Result of {}: \n", pos_move);
+                let mut new_state = state.do_move(pos_move);
+                for idx in 0..8 {
+                    println!("{:?}", new_state.board[7 - idx])
+                }
+                println!("\n");
                 new_state.turn = !new_state.turn;
-                if ChessState::danger_squares(new_state.board, coefficient)
+                if !ChessState::danger_squares(new_state.board, coefficient)
                     .contains(&ChessState::find_position(new_state.board, 6 * coefficient))
                 {
                     all_moves.push(pos_move.clone());
@@ -228,7 +233,7 @@ impl ChessState {
                     pos.0 + 2
                 );
                 if pos.0 == 6 {
-                    for piece in PIECE_SYMBOLS.iter() {
+                    for piece in PIECE_SYMBOLS {
                         all_moves.push(m.clone() + piece);
                     }
                 } else {
@@ -250,7 +255,7 @@ impl ChessState {
                     pos.0 + 2
                 );
                 if pos.0 == 6 {
-                    for piece in PIECE_SYMBOLS.iter() {
+                    for piece in PIECE_SYMBOLS {
                         all_moves.push(m.clone() + piece);
                     }
                 } else {
@@ -293,7 +298,7 @@ impl ChessState {
                     );
                     all_moves.push(m);
                 } else if pos.0 == 1 {
-                    for piece in PIECE_SYMBOLS.iter() {
+                    for piece in PIECE_SYMBOLS {
                         all_moves.push(m.clone() + piece);
                     }
                 } else {
@@ -724,7 +729,14 @@ impl ChessState {
             for (jdx, field) in row.iter().enumerate() {
                 let position = (idx, jdx);
                 match field * coefficient {
-                    -1 => {}
+                    -1 => {
+                        if jdx > 0 {
+                            danger_squares.insert(((idx as i8 + coefficient) as usize, jdx - 1));
+                        }
+                        if jdx < 7 {
+                            danger_squares.insert(((idx as i8 + coefficient) as usize, jdx + 1));
+                        }
+                    }
                     -2 => {
                         for direction in STRAIGHT {
                             for new_pos in ChessState::danger_squares_from_position(
