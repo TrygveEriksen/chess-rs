@@ -56,7 +56,7 @@ impl MinimaxBot {
     }
 
     pub fn minimax_search(&self, state: ChessState) -> (String, i32) {
-        if self.player {
+        if state.turn {
             self.max_value(state, self.max_depth, -2147483648, 2147483647)
         } else {
             self.min_value(state, self.max_depth, -2147483648, 2147483647)

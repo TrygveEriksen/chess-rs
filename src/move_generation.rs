@@ -61,12 +61,7 @@ impl ChessState {
         if danger_squares.contains(&k_pos) {
             let mut all_moves: Vec<String> = Vec::new();
             for pos_move in self.raw_get_all_possible_moves().iter() {
-                println!("Result of {}: \n", pos_move);
                 let mut new_state = self.do_move(pos_move);
-                for idx in 0..8 {
-                    println!("{:?}", new_state.board[7 - idx])
-                }
-                println!("\n");
                 new_state.turn = !new_state.turn;
                 if !ChessState::danger_squares(new_state.board, coefficient)
                     .contains(&find_position(new_state.board, 6 * coefficient))
@@ -292,10 +287,10 @@ impl ChessState {
                     //Black double pawn move
                     let m = format!(
                         "{}{}-{}{}",
-                        (pos.0 + 97) as u8 as char,
-                        pos.1 + 1,
-                        (pos.0 + 97) as u8 as char,
-                        pos.1 - 1
+                        (pos.1 + 97) as u8 as char,
+                        pos.0 + 1,
+                        (pos.1 + 97) as u8 as char,
+                        pos.0 - 1
                     );
                     all_moves.push(m);
                 } else if pos.0 == 1 {
@@ -601,7 +596,6 @@ impl ChessState {
         );
         let mut moves: Vec<(usize, usize)> = Vec::new();
         while -1 < new_pos.0 && new_pos.0 < 8 && -1 < new_pos.1 && new_pos.1 < 8 {
-            //print!("directional_moves while loop   ");
             if board[new_pos.0 as usize][new_pos.1 as usize] == 0 {
                 moves.push((new_pos.0 as usize, new_pos.1 as usize));
             } else if board[new_pos.0 as usize][new_pos.1 as usize] * coefficient < 0 {

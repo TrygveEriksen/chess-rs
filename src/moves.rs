@@ -1,6 +1,5 @@
 use crate::chess_init::ChessState;
-
-const COLUMNS: &'static str = "abcdefgh";
+const COLUMNS: &str = "abcdefgh";
 const PIECE_INDICIES: &str = " PRNBQ";
 
 fn slice_to_coord(col: char, row: char) -> (usize, usize) {
@@ -63,7 +62,6 @@ impl ChessState {
         }
         //pawn moves
         else if COLUMNS.contains(m.chars().nth(0).unwrap()) {
-            println!("Pawn move");
             let source: (usize, usize) =
                 slice_to_coord(m.chars().nth(0).unwrap(), m.chars().nth(1).unwrap());
             let target: (usize, usize) =
