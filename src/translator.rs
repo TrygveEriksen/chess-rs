@@ -46,6 +46,7 @@ pub fn lan_to_uci(state: &ChessState, m: &String) -> String {
 
 pub fn uci_to_lan(state: &ChessState, m: &String) -> String {
     //Castling
+    println!("info {}", m);
     if m == "e1a1" || m == "e8a8" {
         return "O-O-O".to_string();
     } else if m == "e1g1" || m == "e8g8" {

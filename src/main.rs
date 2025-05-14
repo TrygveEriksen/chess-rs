@@ -1,26 +1,27 @@
-use std::io;
-
 use chess_init::ChessState;
 use chessbot::{ChessBot, MinimaxBot};
+use log::{info, warn};
+use std::io;
 mod chess_init;
 mod chessbot;
 mod eval;
 mod move_generation;
 mod moves;
 mod translator;
-
 fn main() {
+    colog::init();
     let mut message: String = String::new();
     let bot: MinimaxBot = MinimaxBot {
         player: true,
-        max_depth: 3,
+        max_depth: 4,
     };
     let mut state: ChessState = ChessState::new_board();
-
+    //colog::init();
     loop {
         io::stdin()
             .read_line(&mut message)
             .expect("Something went wrong with reading stdin");
+        info!("{}", message);
         match message
             .as_str()
             .trim()

@@ -81,8 +81,13 @@ impl ChessState {
             }
             //
             else {
+                if m.contains("x") && new_state.board[target.0][target.1] == 0 {
+                    //en passant capture
+                    new_state.board[(target.0 as i8 - coefficient) as usize][target.1] = 0;
+                }
                 new_state.board[target.0][target.1] =
-                    PIECE_INDICIES.find(m.chars().nth(5).unwrap()).unwrap() as u8 as i8;
+                    PIECE_INDICIES.find(m.chars().nth(5).unwrap()).unwrap() as u8 as i8
+                        * coefficient;
             }
             new_state.board[source.0][source.1] = 0;
         }

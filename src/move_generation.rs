@@ -30,41 +30,19 @@ const STRAIGHT: [(i8, i8); 4] = [(1, 0), (-1, 0), (0, 1), (0, -1)];
 const DIAGONAL: [(i8, i8); 4] = [(1, -1), (-1, 1), (1, 1), (-1, -1)];
 const PIECE_SYMBOLS: &'static [&'static str; 4] = &["R", "B", "N", "Q"];
 
-fn find_positions(board: [[i8; 8]; 8], piece: i8) -> Vec<(usize, usize)> {
-    let mut positions: Vec<(usize, usize)> = Vec::new();
-    for (idx, row) in board.iter().enumerate() {
-        for (jdx, field) in row.iter().enumerate() {
-            if field - piece == 0 {
-                positions.push((idx, jdx));
-            }
-        }
-    }
-    return positions;
-}
-fn find_position(board: [[i8; 8]; 8], piece: i8) -> (usize, usize) {
-    for (idx, row) in board.iter().enumerate() {
-        for (jdx, field) in row.iter().enumerate() {
-            if field - piece == 0 {
-                return (idx, jdx);
-            }
-        }
-    }
-    return (9, 9);
-}
-
 impl ChessState {
     pub fn get_all_possible_moves(&self) -> Vec<String> {
         let coefficient: i8 = if self.turn { 1 } else { -1 };
         let danger_squares: HashSet<(usize, usize)> =
             ChessState::danger_squares(self.board, coefficient);
-        let k_pos: (usize, usize) = find_position(self.board, 6 * coefficient);
+        let k_pos: (usize, usize) = ChessState::find_position(self.board, 6 * coefficient);
         if danger_squares.contains(&k_pos) {
             let mut all_moves: Vec<String> = Vec::new();
             for pos_move in self.raw_get_all_possible_moves().iter() {
                 let mut new_state = self.do_move(pos_move);
                 new_state.turn = !new_state.turn;
                 if !ChessState::danger_squares(new_state.board, coefficient)
-                    .contains(&find_position(new_state.board, 6 * coefficient))
+                    .contains(&ChessState::find_position(new_state.board, 6 * coefficient))
                 {
                     all_moves.push(pos_move.clone());
                 }
@@ -80,12 +58,12 @@ impl ChessState {
         let coefficient: i8 = if player { 1 } else { -1 };
         let back_rank: usize = if player { 0 } else { 7 };
         let mut all_moves: Vec<String> = Vec::new();
-        let p_pos: Vec<(usize, usize)> = find_positions(self.board, 1 * coefficient);
-        let r_pos: Vec<(usize, usize)> = find_positions(self.board, 2 * coefficient);
-        let n_pos: Vec<(usize, usize)> = find_positions(self.board, 3 * coefficient);
-        let b_pos: Vec<(usize, usize)> = find_positions(self.board, 4 * coefficient);
-        let q_pos: Vec<(usize, usize)> = find_positions(self.board, 5 * coefficient);
-        let k_pos: (usize, usize) = find_position(self.board, 6 * coefficient);
+        let p_pos: Vec<(usize, usize)> = ChessState::find_positions(self.board, 1 * coefficient);
+        let r_pos: Vec<(usize, usize)> = ChessState::find_positions(self.board, 2 * coefficient);
+        let n_pos: Vec<(usize, usize)> = ChessState::find_positions(self.board, 3 * coefficient);
+        let b_pos: Vec<(usize, usize)> = ChessState::find_positions(self.board, 4 * coefficient);
+        let q_pos: Vec<(usize, usize)> = ChessState::find_positions(self.board, 5 * coefficient);
+        let k_pos: (usize, usize) = ChessState::find_position(self.board, 6 * coefficient);
         let horisontal_pin: Vec<(usize, usize)> =
             ChessState::horisontal_pin(self.board, k_pos, coefficient);
         let vertical_pin: Vec<(usize, usize)> =
@@ -100,6 +78,7 @@ impl ChessState {
         (if player {
             all_moves.append(&mut ChessState::white_pawn_moves(
                 self,
+                coefficient,
                 &vertical_pin,
                 &horisontal_pin,
                 &left_diagonal_pin,
@@ -109,6 +88,7 @@ impl ChessState {
         } else {
             all_moves.append(&mut ChessState::black_pawn_moves(
                 self,
+                coefficient,
                 &vertical_pin,
                 &horisontal_pin,
                 &left_diagonal_pin,
@@ -118,6 +98,7 @@ impl ChessState {
         });
         all_moves.append(&mut ChessState::straight_moves(
             self,
+            coefficient,
             &vertical_pin,
             &horisontal_pin,
             &left_diagonal_pin,
@@ -128,6 +109,7 @@ impl ChessState {
         ));
         all_moves.append(&mut ChessState::diagonal_moves(
             self,
+            coefficient,
             &vertical_pin,
             &horisontal_pin,
             &left_diagonal_pin,
@@ -139,6 +121,7 @@ impl ChessState {
 
         all_moves.append(&mut ChessState::straight_moves(
             self,
+            coefficient,
             &vertical_pin,
             &horisontal_pin,
             &left_diagonal_pin,
@@ -149,6 +132,7 @@ impl ChessState {
         ));
         all_moves.append(&mut ChessState::diagonal_moves(
             self,
+            coefficient,
             &vertical_pin,
             &horisontal_pin,
             &left_diagonal_pin,
@@ -159,6 +143,7 @@ impl ChessState {
         ));
         all_moves.append(&mut ChessState::knight_moves(
             self,
+            coefficient,
             &vertical_pin,
             &horisontal_pin,
             &left_diagonal_pin,
@@ -167,6 +152,7 @@ impl ChessState {
         ));
         all_moves.append(&mut ChessState::king_moves(
             self,
+            coefficient,
             &danger_squares,
             k_pos,
             back_rank,
@@ -174,8 +160,9 @@ impl ChessState {
         return all_moves;
     }
 
-    fn white_pawn_moves(
+    pub fn white_pawn_moves(
         state: &ChessState,
+        coefficient: i8,
         vertical_pin: &Vec<(usize, usize)>,
         horisontal_pin: &Vec<(usize, usize)>,
         left_diagonal_pin: &Vec<(usize, usize)>,
@@ -261,8 +248,9 @@ impl ChessState {
         }
         return all_moves;
     }
-    fn black_pawn_moves(
+    pub fn black_pawn_moves(
         state: &ChessState,
+        coefficient: i8,
         vertical_pin: &Vec<(usize, usize)>,
         horisontal_pin: &Vec<(usize, usize)>,
         left_diagonal_pin: &Vec<(usize, usize)>,
@@ -348,8 +336,9 @@ impl ChessState {
         }
         return all_moves;
     }
-    fn straight_moves(
+    pub fn straight_moves(
         state: &ChessState,
+        coefficient: i8,
         vertical_pin: &Vec<(usize, usize)>,
         horisontal_pin: &Vec<(usize, usize)>,
         left_diagonal_pin: &Vec<(usize, usize)>,
@@ -413,8 +402,9 @@ impl ChessState {
         }
         return all_moves;
     }
-    fn diagonal_moves(
+    pub fn diagonal_moves(
         state: &ChessState,
+        coefficient: i8,
         vertical_pin: &Vec<(usize, usize)>,
         horisontal_pin: &Vec<(usize, usize)>,
         left_diagonal_pin: &Vec<(usize, usize)>,
@@ -478,8 +468,9 @@ impl ChessState {
         }
         return all_moves;
     }
-    fn knight_moves(
+    pub fn knight_moves(
         state: &ChessState,
+        coefficient: i8,
         vertical_pin: &Vec<(usize, usize)>,
         horisontal_pin: &Vec<(usize, usize)>,
         left_diagonal_pin: &Vec<(usize, usize)>,
@@ -496,7 +487,7 @@ impl ChessState {
                 for dir in KNIGHT_DIRECTIONS {
                     let new_pos = (pos.0 as i8 + dir.0, pos.1 as i8 + dir.1);
                     if -1 < new_pos.0 && new_pos.0 < 8 && -1 < new_pos.1 && new_pos.1 < 7 {
-                        if state.board[new_pos.0 as usize][new_pos.1 as usize] < 1 {
+                        if state.board[new_pos.0 as usize][new_pos.1 as usize] * coefficient < 1 {
                             all_moves.push(
                                 if state.board[new_pos.0 as usize][new_pos.1 as usize] == 0 {
                                     format!(
@@ -523,8 +514,9 @@ impl ChessState {
         }
         return all_moves;
     }
-    fn king_moves(
+    pub fn king_moves(
         state: &ChessState,
+        coefficient: i8,
         danger_squares: &HashSet<(usize, usize)>,
         k_pos: (usize, usize),
         back_rank: usize,
@@ -537,7 +529,7 @@ impl ChessState {
                 && -1 < new_pos.1
                 && new_pos.1 < 8
                 && !danger_squares.contains(&(new_pos.0 as usize, new_pos.1 as usize))
-                && state.board[new_pos.0 as usize][new_pos.1 as usize] < 1
+                && state.board[new_pos.0 as usize][new_pos.1 as usize] * coefficient < 1
             {
                 all_moves.push(
                     if state.board[new_pos.0 as usize][new_pos.1 as usize] == 0 {
@@ -609,7 +601,7 @@ impl ChessState {
         return moves;
     }
 
-    fn vertical_pin(
+    pub fn vertical_pin(
         board: [[i8; 8]; 8],
         position: (usize, usize),
         coefficient: i8,
@@ -627,7 +619,7 @@ impl ChessState {
         pinned
     }
 
-    fn horisontal_pin(
+    pub fn horisontal_pin(
         board: [[i8; 8]; 8],
         position: (usize, usize),
         coefficient: i8,
@@ -645,7 +637,7 @@ impl ChessState {
         pinned
     }
 
-    fn right_diagonal_pin(
+    pub fn right_diagonal_pin(
         board: [[i8; 8]; 8],
         position: (usize, usize),
         coefficient: i8,
@@ -663,7 +655,7 @@ impl ChessState {
         pinned
     }
 
-    fn left_diagonal_pin(
+    pub fn left_diagonal_pin(
         board: [[i8; 8]; 8],
         position: (usize, usize),
         coefficient: i8,
@@ -718,7 +710,7 @@ impl ChessState {
         Vec::new()
     }
 
-    fn danger_squares(board: [[i8; 8]; 8], coefficient: i8) -> HashSet<(usize, usize)> {
+    pub fn danger_squares(board: [[i8; 8]; 8], coefficient: i8) -> HashSet<(usize, usize)> {
         let mut danger_squares = HashSet::new();
         for (idx, row) in board.iter().enumerate() {
             for (jdx, field) in row.iter().enumerate() {
@@ -726,21 +718,17 @@ impl ChessState {
                 match field * coefficient {
                     -1 => {
                         if jdx > 0 {
-                            danger_squares.insert(((idx as i8 + coefficient) as usize, jdx - 1));
+                            danger_squares.insert(((idx as i8 - coefficient) as usize, jdx - 1));
                         }
                         if jdx < 7 {
-                            danger_squares.insert(((idx as i8 + coefficient) as usize, jdx + 1));
+                            danger_squares.insert(((idx as i8 - coefficient) as usize, jdx + 1));
                         }
                     }
                     -2 => {
                         for direction in STRAIGHT {
-                            for new_pos in ChessState::danger_squares_from_position(
-                                board,
-                                coefficient,
-                                direction,
-                                position,
-                            )
-                            .iter()
+                            for new_pos in
+                                ChessState::danger_squares_from_position(board, direction, position)
+                                    .iter()
                             {
                                 danger_squares.insert(*new_pos);
                             }
@@ -759,13 +747,9 @@ impl ChessState {
                     }
                     -4 => {
                         for direction in DIAGONAL {
-                            for new_pos in ChessState::danger_squares_from_position(
-                                board,
-                                coefficient,
-                                direction,
-                                position,
-                            )
-                            .iter()
+                            for new_pos in
+                                ChessState::danger_squares_from_position(board, direction, position)
+                                    .iter()
                             {
                                 danger_squares.insert(*new_pos);
                             }
@@ -773,13 +757,9 @@ impl ChessState {
                     }
                     -5 => {
                         for direction in KING_DIRECTIONS {
-                            for new_pos in ChessState::danger_squares_from_position(
-                                board,
-                                coefficient,
-                                direction,
-                                position,
-                            )
-                            .iter()
+                            for new_pos in
+                                ChessState::danger_squares_from_position(board, direction, position)
+                                    .iter()
                             {
                                 danger_squares.insert(*new_pos);
                             }
@@ -805,7 +785,6 @@ impl ChessState {
 
     fn danger_squares_from_position(
         board: [[i8; 8]; 8],
-        coefficient: i8,
         direction: (i8, i8),
         position: (usize, usize),
     ) -> HashSet<(usize, usize)> {
@@ -815,10 +794,7 @@ impl ChessState {
             position.1 as i8 + direction.1,
         );
         while -1 < new_pos.0 && new_pos.0 < 8 && -1 < new_pos.1 && new_pos.1 < 8 {
-            if board[new_pos.0 as usize][new_pos.1 as usize] * coefficient < 0 {
-                danger_squares.insert((new_pos.0 as usize, new_pos.1 as usize));
-                break;
-            } else if board[new_pos.0 as usize][new_pos.1 as usize] * coefficient > 0 {
+            if board[new_pos.0 as usize][new_pos.1 as usize] != 0 {
                 danger_squares.insert((new_pos.0 as usize, new_pos.1 as usize));
                 break;
             } else {
@@ -829,7 +805,35 @@ impl ChessState {
         return danger_squares;
     }
 
+    pub fn find_positions(board: [[i8; 8]; 8], piece: i8) -> Vec<(usize, usize)> {
+        let mut positions: Vec<(usize, usize)> = Vec::new();
+        for (idx, row) in board.iter().enumerate() {
+            for (jdx, field) in row.iter().enumerate() {
+                if field - piece == 0 {
+                    positions.push((idx, jdx));
+                }
+            }
+        }
+        return positions;
+    }
+    pub fn find_position(board: [[i8; 8]; 8], piece: i8) -> (usize, usize) {
+        for (idx, row) in board.iter().enumerate() {
+            for (jdx, field) in row.iter().enumerate() {
+                if field - piece == 0 {
+                    return (idx, jdx);
+                }
+            }
+        }
+        return (9, 9);
+    }
     pub fn is_terminal(&self) -> bool {
         return self.get_all_possible_moves().len() == 0;
+    }
+    pub fn check(&self) -> bool {
+        let coefficient: i8 = if self.turn { 1 } else { -1 };
+        let danger_squares: HashSet<(usize, usize)> =
+            ChessState::danger_squares(self.board, coefficient);
+        let k_pos: (usize, usize) = ChessState::find_position(self.board, 6 * coefficient);
+        danger_squares.contains(&k_pos)
     }
 }

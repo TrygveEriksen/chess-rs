@@ -100,7 +100,7 @@ impl ChessState {
     pub fn copy(&self) -> ChessState {
         ChessState {
             board: self.board.clone(),
-            turn: self.turn,
+            turn: self.turn.clone(),
             en_passant: self.en_passant.clone(),
             castling: self.castling.clone(),
             halfmoves: self.halfmoves.clone(),
